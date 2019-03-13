@@ -1,3 +1,8 @@
+# Elizabeth Clifton Holcomb
+# March 13, 2019
+# ES 207
+# HW9 P9
+
 # Find all the San and Santa s in the file
 
 library(tidyverse)
