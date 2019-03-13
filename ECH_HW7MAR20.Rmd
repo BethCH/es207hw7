@@ -1,0 +1,119 @@
+---
+title: "ECH_HW7MAR20"
+author: "Beth Clifton Holcomb"
+date: "3/13/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Push your code from Homework 4 question 9, 10, 14 and 15 to your GitHub repo.
+
+
+
+## 9. How many site names in the CA air quality location dataset “Site Name” contain “San” or “Santa?”.
+
+```{r}
+library(tidyverse)
+library(readxl)
+loc <- read_excel("data/ca_ozone/location.xls")
+# define loc as the excel file
+loc
+# check that it's what it's supposed to  be
+
+San <- c("Santa", "San")
+# define variables that will be looked for
+San_tas <- str_c(San, collapse = "|")
+AllSans <- str_subset(loc$'Site Name', San_tas)
+# find the sites in the excel (asigned as loc above) in the Site Name that has a San or Santa
+AllSans
+# show me what happened
+
+```
+
+
+
+## 10. Identify the number of sites that do not have a complete address (full street address and zip code).
+
+```{r}
+LocAddress <- length(loc$Address) - sum(str_detect(loc$Address, "^\\d") & str_detect(loc$`Zip Code`,"\\d{5}"), na.rm = TRUE)
+# define LocAddress to take the Address variable in the loc (assigned above) and remove any address that doesn't start with a number (looking for ones without house numbers) and those that don't have 5 digits in the Zip Code variable (incomplete zip codes)
+LocAddress
+# show me what results
+```
+
+
+
+
+## 14. Write a function to calculate the ANNUAL (calendar year) mean, median, max and min of all sites that have “San” or “Santa” in their name.
+
+```{r}
+# combines daily data by site
+colnames(loc)[1] <- "site"
+daily.site <- daily %>%
+  left_join(loc, by = "site")
+daily.site
+
+```
+
+
+```{r}
+# finds all the San and Santa s
+San1 <- c("Santa", "San")
+San_tas1 <- str_c(San1, collapse = "|")
+AllSans1 <- str_subset(daily.site$'Site Name', San_tas1)
+AllSans1
+unique(AllSans1)
+```
+
+
+```{r}
+P14 <- function(x) {
+  library(tidyverse)
+  library(readxl)
+  loc <- read_excel("data/ca_ozone/location.xls")
+  loc
+  colnames(loc)[1] <- "site"
+  daily.site <- daily %>%
+  left_join(loc, by = "site")
+  daily.site
+  P14annual <- filter(x, str_detect('Site Name', "San|Santa")) 
+  # filter by site name
+  P14annual %>%
+    group_by(Year = str_sub( as.factor(date), start = 1, end = 4), 'Site Name', site) %>%
+    summarize (o3_mean = mean(o3, na.rm = TRUE), o3_median = median(o3, na.rm = TRUE), o3_max = max(o3, na.rm = TRUE), o3_min = min(o3, na.rm = TRUE))
+}
+# take P14annual and filter, group, filter, summarize(do mean, median, min, and max)
+P14a <- P14(daily.site)
+```
+
+
+
+## 15. Write a function to caculate the annual daily mean (what is the annual mean of the daily mean?). Apply that function to Merced County. What is the annual daily mean of o3 for Merced County? Report your results in quantititive format (i.e., prose, or a table), and in visual format (i.e., a graph).
+
+```{r}
+library(data.table)
+daily4 <- o3.filelist %>%
+  rbindlist() %>%
+  group_by(site = as.factor(site), date) %>%
+  summarize(o3 = mean(obs, na.rm = TRUE))
+daily4
+loc1 <- read_excel("data/ca_ozone/location.xls")
+  colnames(loc1)[1] <- "site"
+  daily.site1 <- daily4 %>%
+  left_join(loc1, by = "site")
+  daily.site1
+P15 <- function(x,y) {
+  county <- as.character(y)
+  data <- filter(x, str_detect('County Name', county)) 
+    data %>%
+    group_by(year = str_sub(as.factor(date), start = 1, end = 4)) %>%
+    summarize(An_o3_mean = mean(o3, na.rm = TRUE))
+}
+P15a <- P15(daily.site1, 'Merced')
+#ggplot(data=P15a) + geom_histogram(aes(An_o3_mean, group=year, #colour=StationCode), , subset = .(StationCode %in% c('Merced')), na.rm = TRUE)
+```
+
+
