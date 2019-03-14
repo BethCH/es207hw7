@@ -1,0 +1,287 @@
+---
+title: "ECH_HW4bFeb27DataWrangling"
+author: "Beth Clifton Holcomb"
+date: "2/24/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Data Wrangling - Going Deeper 
+# CA Air Quality Data
+
+```{r}
+o3.filenames <- list.files("Data/ca_ozone", pattern = ".txt")
+# pull in all the files into a list from the provided location that have the pattern
+o3.filenames
+# show me the results
+```
+```{r}
+library(readr)
+setwd("data/ca_ozone")
+# set working directory to this location
+o3.filelist <- lapply(o3.filenames, read_delim, delim = "|")
+# name of thing <-  apply: to the list the function read_delim and do it at the |
+```
+```{r}
+names(o3.filelist) <- gsub(".txt","",o3.filenames)
+# take out the .txt
+o3.filelist
+```
+
+## 3. What class is o3.filelist?
+
+```{r}
+class(o3.filelist)
+```
+
+o3.filelist is a list
+
+## What does it contain?
+
+```{r}
+o3.filelist
+```
+
+o3.filelist contains a list of lists
+
+## 4. Using ~ 1 sentence per line in the above code, explain what each line in the code is doing.
+
+```{r}
+library(tidyverse, quietly = TRUE)
+# load the tidyverse library. don't show all the background stuff, just show any conflicts
+library(readr, quietly = TRUE)
+#load the readr library in the same way
+o3.filenames <- list.files("Data/ca_ozone", pattern = ".txt")
+#assign o3.filenames to be *function* list of files *in* the ca_ozone folder in the data folder *using the pattern* ".txt"
+o3.filenames
+# call o3.filenames to see what's in it *gotta make sure there's not nothing*
+setwd("data/ca_ozone")
+# set working directory to the ca_ozone folder in the data folder 
+o3.filelist <- lapply(o3.filenames, read_delim, delim = "|")
+# assing o3.filelist using *function* lappy to the file o3.filenames using *read_delim* to break apart the lists at "|"
+names(o3.filelist) <- gsub(".txt","",o3.filenames)
+# assign names in o3.filelist by subbing the name associated with the ".txt" in the o3.filenames file and substituting ".txt" with "" 
+o3.filelist
+# R show me o3.filelist to prove that you did what i asked you to
+
+```
+
+## 5. Rewrite the code above using the stringr package instead of grep{base}.
+
+```{r}
+library(stringr, quietly = TRUE)
+# same as above
+o3b.filenames <- list.files("Data/ca_ozone", pattern = ".txt")
+o3b.filenames
+setwd("data/ca_ozone")
+o3b.filelist <- lapply(o3b.filenames, read_delim, delim = "|")
+names(o3b.filelist) <- str_replace_all(o3b.filenames,".txt","")
+#str_replace_all subs for gsub which takes the .txt off the name in o3b.filelist
+o3b.filelist
+```
+
+## 6. Rewrite the code above using traditional object-based R programming instead of the piping operator.
+
+```{r}
+library(data.table)
+daily <- o3.filelist %>%
+  rbindlist() %>%
+  # step 1 binding
+  group_by(site = as.factor(site), date) %>%
+  # step 2 grouping
+  summarize(o3 = mean(obs, na.rm = TRUE))
+# step 3 show the means
+daily
+```
+
+```{r}
+library(data.table)
+daily1 <- summarize(group_by(rbindlist(o3.filelist), site = as.factor(site), date), o3 = mean(obs, na.rm = TRUE))
+# bind then group then summarize without using %>%
+daily1
+```
+
+Maddie was super helpful in understanding the order of nesting vs. piping. this question was super dificult because, though i understood piping sort of, it took understanding the difference of nesting and piping to really be able to answer. 
+
+## 7. Summarize the o3 data above by site and by month and by year using a piping operator (That is, find the monthly mean o3 for each site for each year)
+
+```{r}
+library(data.table)
+# load data.table
+library(lubridate)
+#oad lubridate
+monthly <- daily %>%
+  mutate(year = format(date, "%Y"),
+         # pick out the part of date with the year
+         month = format(date, "%m")) %>% 
+  # pick out the part of the date with month
+  group_by(month, year, site) %>%
+  # group the month, year, and site together
+  summarize(o3_mean = mean(o3))
+# apply mean to the column o3
+monthly
+```
+
+## 8. Challenge! Ozone pollution actually follows a very strong diurnal pattern. How would you summarize the daily data from above in a better way to capture that diurnal pattern? Show me with your code.
+
+## come back to this
+
+```{r}
+library(data.table)
+library(lubridate)
+monthly <- daily %>%
+  mutate(year = format(date, "%Y"),
+         month = format(date, "%m")) %>% 
+  group_by(month, year, site) %>%
+  summarize(o3_mean = mean(o3))
+monthly
+```
+
+
+
+
+
+## 9. How many site names in the CA air quality location dataset “Site Name” contain “San” or “Santa?”.
+
+```{r}
+library(tidyverse)
+library(readxl)
+loc <- read_excel("data/ca_ozone/location.xls")
+# define loc as the excel file
+loc
+
+San <- c("Santa", "San")
+San_tas <- str_c(San, collapse = "|")
+AllSans <- str_subset(loc$'Site Name', San_tas)
+AllSans
+
+```
+
+
+
+## 10. Identify the number of sites that do not have a complete address (full street address and zip code).
+
+```{r}
+LocAddress <- length(loc$Address) - sum(str_detect(loc$Address, "^\\d") & str_detect(loc$`Zip Code`,"\\d{5}"), na.rm = TRUE)
+LocAddress
+```
+
+
+
+## 11. What makes a dataset tidy?
+
+following the three rules laid out in chapter 12 seen in the next question, having a uniform data layout and useful format makes data tidy (aka useful)
+
+## 12. What is the interrelationship between the three rules of tidy data? What are the practical consequences?
+
+The three rules of tidy data:
+1. Each variable must have its own column.
+2. Each observation must have its own row.
+3. Each value must have its own cell.
+
+Essentially, the interrelationship between the three rules is that each individual thing has its place and should be in it. The text also talks about how data cannot only fallow two of the three rules. The best way to discribe the practical consequences would be understanding the way csv files load and then what happens if there's a single variable that has a space in stead of a camma. if each item has its own place and it is in it, the data can be used, analyzed, and evaluated in a timely and orderly fashion. if one thing is out of place, data wrangling or cleaning must take place before any analysis can take place. this takes time and energy that could be used on analysis.
+there are r specific andvantages as well to tidy data. variables in columns makes working with data in r super awesome. data can easily be tranformed or analyzed easily. tools will also work consistently if the data format is consistent. 
+
+
+## 13. How does a semi join differ from an inner join? Demonstrate this with an example with code.
+
+semi join keeps all observations in x that have a match in y
+inner join merges x and y
+
+## Semi join
+```{r}
+file1 <- read.table('data/ca_ozone/ozone19801984.txt')
+file2 <- read.table('data/ca_ozone/ozone19901994.txt')
+semi1 <- semi_join(file1, file2)
+head(semi1, 10)
+```
+
+## inner join
+
+```{r}
+file1 <- read.table('data/ca_ozone/ozone19801984.txt')
+file2 <- read.table('data/ca_ozone/ozone19901994.txt')
+inner1 <- inner_join(file1, file2)
+head(inner1, 10)
+```
+
+
+
+
+
+## 14. Write a function to calculate the ANNUAL (calendar year) mean, median, max and min of all sites that have “San” or “Santa” in their name.
+
+```{r}
+colnames(loc)[1] <- "site"
+daily.site <- daily %>%
+  left_join(loc, by = "site")
+daily.site
+
+```
+
+
+```{r}
+San1 <- c("Santa", "San")
+San_tas1 <- str_c(San1, collapse = "|")
+AllSans1 <- str_subset(daily.site$'Site Name', San_tas1)
+AllSans1
+unique(AllSans1)
+```
+
+
+```{r}
+P14 <- function(x) {
+  library(tidyverse)
+  library(readxl)
+  loc <- read_excel("data/ca_ozone/location.xls")
+  loc
+  colnames(loc)[1] <- "site"
+  daily.site <- daily %>%
+  left_join(loc, by = "site")
+  daily.site
+  P14annual <- filter(x, str_detect('Site Name', "San|Santa")) 
+  # filter by site name
+  P14annual %>%
+    group_by(Year = str_sub( as.factor(date), start = 1, end = 4), 'Site Name', site) %>%
+    summarize (o3_mean = mean(o3, na.rm = TRUE), o3_median = median(o3, na.rm = TRUE), o3_max = max(o3, na.rm = TRUE), o3_min = min(o3, na.rm = TRUE))
+}
+# take P14annual and filter, group, filter, summarize(do mean, median, min, and max)
+P14a <- P14(daily.site)
+```
+
+
+
+## 15. Write a function to caculate the annual daily mean (what is the annual mean of the daily mean?). Apply that function to Merced County. What is the annual daily mean of o3 for Merced County? Report your results in quantititive format (i.e., prose, or a table), and in visual format (i.e., a graph).
+
+```{r}
+library(data.table)
+daily4 <- o3.filelist %>%
+  rbindlist() %>%
+  group_by(site = as.factor(site), date) %>%
+  summarize(o3 = mean(obs, na.rm = TRUE))
+daily4
+loc1 <- read_excel("data/ca_ozone/location.xls")
+  colnames(loc1)[1] <- "site"
+  daily.site1 <- daily4 %>%
+  left_join(loc1, by = "site")
+  daily.site1
+P15 <- function(x,y) {
+  county <- as.character(y)
+  data <- filter(x, str_detect('County Name', county)) 
+    data %>%
+    group_by(year = str_sub(as.factor(date), start = 1, end = 4)) %>%
+    summarize(An_o3_mean = mean(o3, na.rm = TRUE))
+}
+P15a <- P15(daily.site1, 'Merced')
+#ggplot(data=P15a) + geom_histogram(aes(An_o3_mean, group=year, #colour=StationCode), , subset = .(StationCode %in% c('Merced')), na.rm = TRUE)
+```
+
+
+
+
+
+
+
