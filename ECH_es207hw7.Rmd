@@ -1,0 +1,21 @@
+---
+title: "ECH_es207hw7"
+author: "Beth Clifton Holcomb"
+date: "3/15/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Homework 7 Comparing Groups
+
+
+
+
+
+
+
+
+
