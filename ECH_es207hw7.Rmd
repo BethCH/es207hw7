@@ -11,11 +11,176 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ## Homework 7 Comparing Groups
 
+```{r}
+#read in data
+require(tidyverse, quietly = TRUE)
+# read in the csv and assign wq to be that file for the rest of the tasks
+wq <- suppressMessages(read_csv("data/BayDeltaWQ.csv", col_names = TRUE, na = c("NA", "n/p", "n/a"), guess_max = 30000))
+
+```
+
+```{r}
+#filter out field data for the top meter
+wq.f <- wq %>% 
+  filter(VarType == "Field" & Depth == 3)
+# and then only pull out relevant station codes 
+wq.f <- wq.f %>% 
+  filter(StationCode %in% c("C3", "D10", "D4", "D22", "D12", "D16", "D26", "D19", "MD10", "D28A", "P8", "C10", "D7", "D8", "D6", "D41"))
+wq.f
+```
+
+## 1. What does the %n% do in the filter function in the code above?
+
+Like piping operator %>%, the %in% can be used to, in this case, apply the filter command to StationCode within the wq.f file without having to explicitely have that input in the function.
+
+```{r}
+library(ggthemes)
+p <- ggplot(wq.f, aes(x = SampleDate, y = Turbidity)) + 
+  geom_line() + facet_wrap(~StationCode, ncol = 3)
+p + theme_fivethirtyeight()
+
+```
+
+```{r}
+wq.f <- wq.f %>% 
+  filter(StationCode %in% c("C10", "D26", "C3", "D4", "D6", "D7", "D8")) %>% 
+  filter(between(SampleDate, as.Date("1975-01-01"), as.Date("2000-12-01")))
+#sanity check
+p <- ggplot(wq.f, aes(x = SampleDate, y = Turbidity)) + 
+  geom_line() + facet_wrap(~StationCode, ncol = 3)
+p + theme_bw()
+```
+
+```{r}
+library(lubridate)
+wq.f$year <- year(wq.f$SampleDate)  
+wq.y <- wq.f %>% 
+  group_by(StationCode, year) %>% 
+  summarize(meanTurb = mean(Turbidity), nTurb = n())
+head(wq.y)
+```
+
+```{r}
+# rank the data smallest to largest
+wq.y$rank <- rank(wq.y$meanTurb, ties.method = "average")
+# let me also make StationCode a factor to make my life easier later on in this analysis...
+wq.y$StationCode <- as.factor(wq.y$StationCode)
+head(wq.y)
+```
+
+```{r}
+# should be a straight line
+ggplot(wq.y, aes(x = rank, y = rank)) + geom_point()
+```
+
+```{r}
+# y ~ x where y = explainatory variable(factor) x = response variable
+rank.aov <- aov(rank ~ StationCode, data = wq.y)
+```
+
+```{r}
+# plot it!
+ggplot(wq.y, aes(x = StationCode, y = meanTurb)) + geom_boxplot() +
+  xlab("Station") + ylab ("Mean Annual Turbidity") 
+```
+
+```{r}
+# same thing but more handsome 
+library(ggthemes)
+ggplot(wq.y, aes(x = StationCode, y = meanTurb)) + geom_boxplot() + theme_tufte() +
+  xlab("Station") + ylab ("Mean Annual Turbidity")
+```
+
+```{r}
+# look at results and see what they say
+rank.aov
+```
+
+```{r}
+# summarize
+# want: big f value and very low p-value
+summary.aov(rank.aov)
+```
+
+```{r}
+# confint(rank.aov)
+head(confint(rank.aov))
+```
+
+## 2. Be creative. Plot these confidence intervals in a manner that enables you to better visualize them and compare across stations?
+
+```{r}
+# I like the box plot. 
+library(ggthemes)
+ggplot(wq.y, aes(x = StationCode, y = meanTurb)) + geom_boxplot() + theme_tufte() +
+  xlab("Station") + ylab ("Mean Annual Turbidity")
+
+```
+
+
+```{r}
+layout(matrix(c(1,2,3,4),2,2)) # optional layout
+plot(rank.aov) # diagnostic plots
+```
+
+```{r}
+plot(rank.aov, which = 1)
+```
+
+
+## 3. Go interrogate the data points for row 75. What station does it come from. What year? What is the value? Do you have an explanation for why this may be behaving as an outlier?
+
+```{r}
+wq.y[75,]
+```
+
+Row 75 is station D26 in 1997 wit no mean turbidity but n turbidity is 12. It's mean turbidity having a value of NA may be why it is not behaving like the rest of the values from the station. Initially i thought it was the 'nTurb' value but there are many stations with values of 11 or 12. There are, however, many stations that have 'NA' 'meanTurb' values that are ranke similarly to station D26 for 1997
+
+
+```{r}
+plot(rank.aov, which = 3)
+```
+
+```{r}
+plot(rank.aov, which = 2)
+```
+
+```{r}
+plot(rank.aov, which = 4)
+```
+
+## 4. Go interrogate the data points for rows 72, 75 and 76. What stations do they come from. What year? What are the values? Do you have an explanation for why these may be behaving as outliers?
+
+```{r}
+wq.y[72:76,]
+```
+
+Row 72, 75, and 76 are all for station D26 with NA mean turbidity. They are for 1994, 1997, and 1998 respectfully. I wonder if the NA value makes them outliers because many of the outliers are all ranked similarly and these 3 are no exception 
+
+```{r}
+classic.aov <- aov(meanTurb ~ StationCode, data = wq.y)
+summary(classic.aov)
+```
+
+```{r}
+head(confint(classic.aov))
+```
+
+```{r}
+layout(matrix(c(1,2,3,4),2,2)) # optional layout 
+plot(classic.aov) # diagnostic plots
+```
 
 
 
 
 
 
+
+
+
+
+
+## come back to 2!!!
 
 
